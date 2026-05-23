@@ -1,2 +1,50 @@
-import{Routes,Route}from'react-router-dom';import Navbar from './components/Navbar';import Footer from './components/Footer';import Home from './pages/Home';import Live from './pages/Live';import Schedule from './pages/Schedule';import Players from './pages/Players';import Teams from './pages/Teams';import News from './pages/News';import Admin from './pages/Admin';import Scorecard from './pages/Scorecard';
-export default function App(){return <><Navbar/><main><Routes><Route path="/" element={<Home/>}/><Route path="/live" element={<Live/>}/><Route path="/schedule" element={<Schedule/>}/><Route path="/players" element={<Players/>}/><Route path="/teams" element={<Teams/>}/><Route path="/news" element={<News/>}/><Route path="/admin" element={<Admin/>}/><Route path="/scorecard" element={<Scorecard/>}/></Routes></main><Footer/></>}
+import { Routes, Route } from "react-router-dom";
+
+import Navbar from "./components/Navbar";
+import Footer from "./components/Footer";
+
+import Home from "./pages/Home";
+import Live from "./pages/Live";
+import Schedule from "./pages/Schedule";
+import Upcoming from "./pages/Upcoming";
+import IPL from "./pages/IPL";
+
+import Players from "./pages/Players";
+import Teams from "./pages/Teams";
+import News from "./pages/News";
+import Admin from "./pages/Admin";
+import Scorecard from "./pages/Scorecard";
+
+export default function App() {
+  return (
+    <>
+      <Navbar />
+
+      <main>
+        <Routes>
+          <Route path="/" element={<Home />} />
+
+          <Route path="/live" element={<Live />} />
+
+          <Route path="/schedule" element={<Schedule />} />
+
+          <Route path="/upcoming" element={<Upcoming />} />
+
+          <Route path="/ipl" element={<IPL />} />
+
+          <Route path="/players" element={<Players />} />
+
+          <Route path="/teams" element={<Teams />} />
+
+          <Route path="/news" element={<News />} />
+
+          <Route path="/admin" element={<Admin />} />
+
+          <Route path="/scorecard" element={<Scorecard />} />
+        </Routes>
+      </main>
+
+      <Footer />
+    </>
+  );
+}

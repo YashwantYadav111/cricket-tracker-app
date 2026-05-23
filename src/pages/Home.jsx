@@ -26,7 +26,7 @@ export default function Home() {
     <>
       <section className="hero">
         <div>
-          <span className="tag">MINI CRICBUZZ / ESPN STYLE</span>
+          <span className="tag">Crickrt tracker web application / ESPN STYLE</span>
 
           <h1>
             Live Cricket Scores, Match Details & Player Stats

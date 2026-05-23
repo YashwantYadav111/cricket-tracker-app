@@ -1,15 +1,9 @@
-alert("CRICKET API FILE LOADED");
 import axios from "axios";
 import { mockMatches } from "../data/mockData";
 
 const API_KEY = import.meta.env.VITE_RAPIDAPI_KEY;
 const HOST =
-  import.meta.env.VITE_RAPIDAPI_HOST ||
-  "cricbuzz-cricket.p.rapidapi.com";
-
-console.log("cricketApi loaded");
-console.log("API KEY =", API_KEY);
-console.log("HOST =", HOST);
+  import.meta.env.VITE_RAPIDAPI_HOST || "cricbuzz-cricket.p.rapidapi.com";
 
 const api = axios.create({
   baseURL: `https://${HOST}`,
@@ -18,6 +12,12 @@ const api = axios.create({
     "X-RapidAPI-Host": HOST,
   },
 });
+
+const getScoreText = (teamScore) => {
+  const inngs = teamScore?.inngs1 || teamScore?.inngs2;
+  if (!inngs) return "Yet to bat";
+  return `${inngs.runs || 0}/${inngs.wickets || 0} (${inngs.overs || 0})`;
+};
 
 const normalize = (data, type = "live") => {
   const blocks = data?.typeMatches || [];
@@ -28,13 +28,11 @@ const normalize = (data, type = "live") => {
 
     seriesMatches.forEach((seriesBlock) => {
       const wrapper = seriesBlock?.seriesAdWrapper;
-
       if (!wrapper) return;
 
       const seriesName = wrapper.seriesName || "Cricket Series";
-      const apiMatches = wrapper.matches || [];
 
-      apiMatches.forEach((item) => {
+      (wrapper.matches || []).forEach((item) => {
         const info = item?.matchInfo;
         const score = item?.matchScore;
 
@@ -46,92 +44,118 @@ const normalize = (data, type = "live") => {
           match: info.matchDesc || "Match",
           team1: info.team1.teamName,
           team2: info.team2.teamName,
-
-          score1: score?.team1Score
-            ? `${score.team1Score.inngs1?.runs || 0}/${
-                score.team1Score.inngs1?.wickets || 0
-              } (${score.team1Score.inngs1?.overs || 0})`
-            : "Yet to bat",
-
-          score2: score?.team2Score
-            ? `${score.team2Score.inngs1?.runs || 0}/${
-                score.team2Score.inngs1?.wickets || 0
-              } (${score.team2Score.inngs1?.overs || 0})`
-            : "Yet to bat",
-
+          score1: getScoreText(score?.team1Score),
+          score2: getScoreText(score?.team2Score),
           status: info.status || type,
           venue: info.venueInfo?.ground || "TBA",
-
           time: info.startDate
             ? new Date(Number(info.startDate)).toLocaleString()
             : "TBA",
-
           type,
         });
       });
     });
   });
 
-  console.log("NORMALIZED MATCHES =", matches);
-
-  return matches.length ? matches : mockMatches;
+  return matches;
 };
 
 export async function getLiveMatches() {
   try {
-    console.log("getLiveMatches called");
-    console.log("API KEY =", API_KEY);
-    console.log("HOST =", HOST);
-
-    if (!API_KEY) {
-      alert("API KEY MISSING");
-      return mockMatches;
-    }
+    if (!API_KEY) return mockMatches;
 
     const response = await api.get("/matches/v1/live");
+    const matches = normalize(response.data, "live");
 
-    console.log("FULL RESPONSE =", response);
-    console.log("LIVE API DATA =", response.data);
-
-    alert("API SUCCESS");
-
-    return normalize(response.data, "live");
+    return matches.length ? matches : mockMatches;
   } catch (error) {
-    console.error("API ERROR =", error);
-
-    alert(
-      "API ERROR: " +
-      (error.response?.status || error.message)
-    );
-
+    console.error("LIVE API ERROR:", error.response?.status || error.message);
     return mockMatches;
   }
 }
 
 export async function getUpcomingMatches() {
-  console.log("getUpcomingMatches called");
+  try {
+    if (!API_KEY) return mockMatches.filter((m) => m.type === "upcoming");
 
-  if (!API_KEY) {
+    const response = await api.get("/matches/v1/upcoming");
+    const matches = normalize(response.data, "upcoming");
+
+    return matches.length
+      ? matches
+      : mockMatches.filter((m) => m.type === "upcoming");
+  } catch (error) {
+    console.error(
+      "UPCOMING API ERROR:",
+      error.response?.status || error.message
+    );
+
     return mockMatches.filter((m) => m.type === "upcoming");
   }
-
-  const response = await api.get("/matches/v1/upcoming");
-
-  console.log("UPCOMING RESPONSE =", response);
-
-  return normalize(response.data, "upcoming");
 }
 
 export async function getRecentMatches() {
-  console.log("getRecentMatches called");
+  try {
+    if (!API_KEY) return mockMatches;
 
-  if (!API_KEY) {
+    const response = await api.get("/matches/v1/recent");
+    const matches = normalize(response.data, "recent");
+
+    return matches.length ? matches : mockMatches;
+  } catch (error) {
+    console.error("RECENT API ERROR:", error.response?.status || error.message);
     return mockMatches;
   }
+}
 
-  const response = await api.get("/matches/v1/recent");
+export async function getIPLMatches() {
+  try {
+    if (!API_KEY) return mockMatches.filter((m) => m.series.includes("IPL"));
 
-  console.log("RECENT RESPONSE =", response);
+    const [liveRes, upcomingRes, recentRes] = await Promise.allSettled([
+      api.get("/matches/v1/live"),
+      api.get("/matches/v1/upcoming"),
+      api.get("/matches/v1/recent"),
+    ]);
 
-  return normalize(response.data, "recent");
+    const allMatches = [];
+
+    if (liveRes.status === "fulfilled") {
+      allMatches.push(...normalize(liveRes.value.data, "live"));
+    }
+
+    if (upcomingRes.status === "fulfilled") {
+      allMatches.push(...normalize(upcomingRes.value.data, "upcoming"));
+    }
+
+    if (recentRes.status === "fulfilled") {
+      allMatches.push(...normalize(recentRes.value.data, "recent"));
+    }
+
+    const iplMatches = allMatches.filter((m) => {
+      const text = `${m.series} ${m.match} ${m.team1} ${m.team2}`.toLowerCase();
+
+      return (
+        text.includes("ipl") ||
+        text.includes("indian premier league") ||
+        text.includes("rcb") ||
+        text.includes("csk") ||
+        text.includes("mi") ||
+        text.includes("kkr") ||
+        text.includes("srh") ||
+        text.includes("rr") ||
+        text.includes("dc") ||
+        text.includes("gt") ||
+        text.includes("pbks") ||
+        text.includes("lsg")
+      );
+    });
+
+    return iplMatches.length
+      ? iplMatches
+      : mockMatches.filter((m) => m.series.includes("IPL"));
+  } catch (error) {
+    console.error("IPL API ERROR:", error.response?.status || error.message);
+    return mockMatches.filter((m) => m.series.includes("IPL"));
+  }
 }
