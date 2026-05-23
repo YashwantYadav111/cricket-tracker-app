@@ -1,0 +1,1 @@
+const teams=['India','Australia','England','South Africa','CSK','MI','RCB','KKR'];export default function Teams(){return <><h1>Teams</h1><div className="grid teamsGrid">{teams.map(t=><div className="card team" key={t}><div className="logo">{t.slice(0,2)}</div><h3>{t}</h3><p>Squad, fixtures and recent performance</p></div>)}</div></>}
